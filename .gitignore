@@ -1,1 +1,13 @@
-/.idea
+# Untracked directories
+**/.idea
+**/.vscode
+**/__pycache__
+**/pipelines
+**/onnx_models
+
+# Untracked files
+*.npy
+*.onnx
+*.docx
+*.pkl
+*.csv
