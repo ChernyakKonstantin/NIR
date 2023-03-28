@@ -4,6 +4,11 @@
 **/__pycache__
 **/pipelines
 **/onnx_models
+**/old
+**/pipeline_dataset
+**/synthetic_dataset
+**/experiments
+**/.ipynb_checkpoints
 
 # Untracked files
 *.npy
