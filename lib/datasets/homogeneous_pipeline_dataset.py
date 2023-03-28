@@ -28,8 +28,10 @@ class HomogeneousPipelineDataset(Dataset):
             transform: Callable = None,
             log: bool = True,
             direction: str = "undirected", # directed, reversed
+            use_operations_hyperparameters: bool = True,
     ):
         self.direction = direction
+        self.use_operations_hyperparameters = use_operations_hyperparameters
 
         self.json_pipelines = list(Path(os.path.join(root, "pipelines")).glob("**/*.json"))
         self.pickle_metrics = list(Path(os.path.join(root, "metrics")).glob("**/*.pickle"))
@@ -179,9 +181,11 @@ class HomogeneousPipelineDataset(Dataset):
 
     def _operation2vec(self, operation_name: str, operation_parameters: Dict[str, Any]) -> np.ndarray:
         name_vec = self._operation_name2vec(operation_name)
-        parameters_vec = self._parameters2vec(operation_name, operation_parameters)
-        return np.hstack((name_vec, parameters_vec))
-
+        if self.use_operations_hyperparameters:
+            parameters_vec = self._parameters2vec(operation_name, operation_parameters)
+            return np.hstack((name_vec, parameters_vec))
+        else:
+            return name_vec
     def _operations2tensor(
             self,
             operations_names: List[str],
