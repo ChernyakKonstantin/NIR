@@ -4,7 +4,6 @@ import pickle
 from collections import defaultdict
 from itertools import chain
 from pathlib import Path
-from typing import Callable
 from typing import Union, List, Tuple, Dict, Any
 
 import numpy as np
@@ -20,14 +19,14 @@ class HomogeneousPipelineDataset(Dataset):
     OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME = "operations_parameters_vector_indexes_filename.pickle"
     OPERATIONS_PARAMETERS_VECTOR_TEMPLATE_FILENAME = "operations_parameters_vector_template_filename.pickle"
     METRICS_SCALER_FILENAME = "metrics_scaler_filename.pickle"
+    TRAIN_RATIO, VAL_RATIO, TEST_RATIO = 0.7, 0.15, 0.15
 
-    # TODO: add split to train\val\test
     def __init__(
             self,
             root: str,
-            transform: Callable = None,
+            split: str = None,  # train, val, test
             log: bool = True,
-            direction: str = "undirected", # directed, reversed
+            direction: str = "undirected",  # undirected, directed, reversed
             use_operations_hyperparameters: bool = True,
     ):
         self.direction = direction
@@ -35,7 +34,21 @@ class HomogeneousPipelineDataset(Dataset):
 
         self.json_pipelines = list(Path(os.path.join(root, "pipelines")).glob("**/*.json"))
         self.pickle_metrics = list(Path(os.path.join(root, "metrics")).glob("**/*.pickle"))
-        super().__init__(root, transform, pre_transform=None, pre_filter=None, log=log)
+        super().__init__(root, log=log)
+        if split is not None:
+            if split == "train":
+                start = 0
+                stop = int(self.TRAIN_RATIO * len(self.json_pipelines))
+            elif split == "val":
+                start = int(self.TRAIN_RATIO * len(self.json_pipelines))
+                stop = int((self.TRAIN_RATIO + self.VAL_RATIO) * len(self.json_pipelines))
+            elif split == "test":
+                start = int((self.TRAIN_RATIO + self.VAL_RATIO) * len(self.json_pipelines))
+                stop = len(self.json_pipelines)
+            else:
+                raise ValueError(f"Unknown split: {split}")
+            self.json_pipelines = self.json_pipelines[start: stop]
+            self.pickle_metrics = self.pickle_metrics[start: stop]
 
         self._operations_parameters_vector_indexes = self._load_pickle(
             os.path.join(self.processed_dir, self.OPERATIONS_PARAMETERS_VECTOR_INDEXES_FILENAME),
@@ -52,6 +65,7 @@ class HomogeneousPipelineDataset(Dataset):
         self._metrics_scaler = self._load_pickle(
             os.path.join(self.processed_dir, self.METRICS_SCALER_FILENAME),
         )
+
     def _fit_operation_name_one_hot_encoder(self, names: List[str]) -> None:
         one_hot_encoder = OneHotEncoder(sparse_output=False)
         one_hot_encoder.fit(np.array(names).reshape(-1, 1))
@@ -135,7 +149,7 @@ class HomogeneousPipelineDataset(Dataset):
         with open(path, "rb") as f:
             data = pickle.load(f)
         return data
-    
+
     def _load_json(self, path: Path) -> Dict[str, Any]:
         with open(path) as f:
             data = json.load(f)
@@ -158,11 +172,11 @@ class HomogeneousPipelineDataset(Dataset):
 
     def _operation_name2vec(self, operation_name: str) -> np.ndarray:
         return self._operation_name_one_hot_encoder.transform(np.array([[operation_name, ]])).reshape(-1)
-    
+
     def _metrics_preprocessing(self, metrics: Dict[str, float]) -> torch.Tensor:
         processed = self._metrics_scaler.transform(np.array(list(metrics.values())).reshape(1, -1)).reshape(-1)
         return torch.Tensor(processed)
-    
+
     def _operation_preprocessing(self, operation_name: str, operation_parameters: Dict[str, Any]) -> Dict[
         str, np.ndarray]:
         processed = {}
@@ -186,6 +200,7 @@ class HomogeneousPipelineDataset(Dataset):
             return np.hstack((name_vec, parameters_vec))
         else:
             return name_vec
+
     def _operations2tensor(
             self,
             operations_names: List[str],
@@ -225,7 +240,7 @@ class HomogeneousPipelineDataset(Dataset):
         edge_index = self._get_edge_index_tensor(nodes)
         data = Data(operations_tensor, edge_index)
         return data
-    
+
     def _get_metrics(self, idx: int) -> torch.Tensor:
         pickle = self.pickle_metrics[idx]
         metrics = self._load_pickle(pickle)
