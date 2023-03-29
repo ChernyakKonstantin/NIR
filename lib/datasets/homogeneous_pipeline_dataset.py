@@ -21,6 +21,24 @@ class HomogeneousPipelineDataset(Dataset):
     METRICS_SCALER_FILENAME = "metrics_scaler_filename.pickle"
     TRAIN_RATIO, VAL_RATIO, TEST_RATIO = 0.7, 0.15, 0.15
 
+    type_name_mapping = {
+        'scaling': 'ScalingImplementation',
+        'normalization': 'NormalizationImplementation',
+        'pca': 'PCAImplementation',
+        'lgbm': 'LGBMClassifier',
+        'mlp': 'MLPClassifier',
+        'bernb': 'BernoulliNB',
+        'isolation_forest_class': 'IsolationForestClassImplementation',
+        'fast_ica': 'FastICAImplementation',
+        'rf': 'RandomForestClassifier',
+        'dt': 'DecisionTreeClassifier',
+        'qda': 'QDAImplementation',
+        'knn': 'FedotKnnClassImplementation',
+        'resample': 'ResampleImplementation',
+        'logit': 'LogisticRegression',
+        'poly_features': 'PolyFeaturesImplementation'
+    }
+
     def __init__(
             self,
             root: str,
@@ -159,10 +177,22 @@ class HomogeneousPipelineDataset(Dataset):
         return [node["operation_id"] for node in nodes]
 
     def _get_operations_names(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[str]:
+        operations_names = []
         if order is None:
-            return [node["operation_name"] for node in nodes]
+            for node in nodes:
+                operation_name = node["operation_name"]
+                if operation_name is None:  # TODO: is it fix or ok?
+                    operation_type = node["operation_type"]
+                    operation_name = self.type_name_mapping[operation_type]
+                operations_names.append(operation_name)
         else:
-            return [nodes[index]["operation_name"] for index in order]
+            for index in order:
+                operation_name = nodes[index]["operation_name"]
+                if operation_name is None:
+                    operation_type = nodes[index]["operation_type"]
+                    operation_name = self.type_name_mapping[operation_type]
+                operations_names.append(operation_name)
+        return operations_names
 
     def _get_operations_parameters(self, nodes: List[Dict[str, Any]], order: List[int] = None) -> List[Dict[str, Any]]:
         if order is None:
