@@ -6,10 +6,11 @@ from torch import optim
 
 
 class LightningModule(LightningModule_):
-    def __init__(self, model: nn.Module, loss: Callable):
+    def __init__(self, model: nn.Module, loss: Callable, lr: float = 1e-3):
         super().__init__()
         self.model = model
         self.loss = loss
+        self.lr = lr
 
     def forward(self, x):
         return self.model(x)
@@ -36,5 +37,5 @@ class LightningModule(LightningModule_):
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
