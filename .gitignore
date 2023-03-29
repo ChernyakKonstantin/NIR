@@ -6,6 +6,7 @@
 **/onnx_models
 **/old
 **/pipeline_dataset
+**/synthetic_pipeline_dataset
 **/synthetic_dataset
 **/experiments
 **/.ipynb_checkpoints
